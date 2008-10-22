@@ -2,6 +2,7 @@
 //  SFHFKeychainUtils.m
 //
 //  Created by Buzz Andersen on 10/20/08.
+//  Based partly on code from "TouchTheFireEagle" by Jonathan Wight
 //  Copyright 2008 Sci-Fi Hi-Fi. All rights reserved.
 //
 //  Permission is hereby granted, free of charge, to any person
