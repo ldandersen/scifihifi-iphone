@@ -96,6 +96,12 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	
 	SecKeychainItemRef item = [SFHFKeychainUtils getKeychainItemReferenceForUsername: username andServiceName: serviceName error: error];
 	
+	if (*error && [*error code] != noErr) {
+		return;
+	}
+	
+	*error = nil;
+	
 	if (item) {
 		status = SecKeychainItemModifyAttributesAndData(item,
 														NULL,
@@ -135,7 +141,11 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 													 &item);
 	
 	if (status != noErr) {
-		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
+		
+		if (status != errSecItemNotFound) {
+			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
+		}
+		
 		return nil;		
 	}
 	
@@ -156,7 +166,7 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	
 	OSStatus status = SecItemCopyMatching((CFDictionaryRef) query, (CFTypeRef *) &result);
 	
-	if (status != noErr) {
+	if (status != noErr && status != errSecItemNotFound) {
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
 		return nil;
 	}
@@ -166,14 +176,18 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	return password;
 }
 
-+ (void) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error {	
-	*error = nil;
-	
++ (void) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error {		
 	NSString *existingPassword = [SFHFKeychainUtils getPasswordForUsername: username andServiceName: serviceName error: error];
+
+	if ([*error code] != noErr) {
+		return;
+	}
+	
+	*error = nil;
 	
 	OSStatus status;
 		
-	if (!*error && existingPassword) {
+	if (existingPassword) {
 		if ((existingPassword != password) && updateExisting) {
 			NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, 
 							  kSecAttrService, 
