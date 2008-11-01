@@ -159,8 +159,8 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	
 	NSDictionary *result;
 	
-	NSArray *keys = [[NSArray alloc] initWithObjects: (NSString *) kSecClass, kSecAttrAccount, kSecAttrService, kSecReturnAttributes, nil];
-	NSArray *objects = [[NSArray alloc] initWithObjects: (NSString *) kSecClassGenericPassword, username, serviceName, kCFBooleanTrue, nil];
+	NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, kSecAttrAccount, kSecAttrService, kSecReturnAttributes, nil] autorelease];
+	NSArray *objects = [[[NSArray alloc] initWithObjects: (NSString *) kSecClassGenericPassword, username, serviceName, kCFBooleanTrue, nil] autorelease];
 	
 	NSDictionary *query = [[NSDictionary alloc] initWithObjects: objects forKeys: keys];
 	
@@ -174,7 +174,10 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 		return nil;
 	}
 	
+	[query release];
+	
 	NSString *password = (NSString *) [result objectForKey: (NSString *) kSecAttrGeneric];
+	[result autorelease];
 	
 	return password;
 }
@@ -226,8 +229,7 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 		
 		NSDictionary *query = [[[NSDictionary alloc] initWithObjects: objects forKeys: keys] autorelease];			
 
-		NSDictionary *result;
-		status = SecItemAdd((CFDictionaryRef) query, (CFTypeRef *) &result);
+		status = SecItemAdd((CFDictionaryRef) query, NULL);
 	}
 	
 	if (status != noErr) {
