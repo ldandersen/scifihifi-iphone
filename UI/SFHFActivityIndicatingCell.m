@@ -46,19 +46,24 @@
 		self.textLabel.adjustsFontSizeToFitWidth = YES;
 		[self addSubview: self.textLabel];
 		[textLabel release];
-		
+
+		UIImageView *imageView = [[UIImageView alloc] initWithImage: nil];	
+		self.imageView = imageView;
+		[self addSubview: self.imageView];
+		[imageView release];
+				
 		self.isIndicatingActivity = NO;
+		
+		[self layoutSubviews];
+
     }
     return self;
 }
 
 - (void) setImage: (UIImage *) theImage {
 	super.image = theImage;
-	
-	UIImageView *imageView = [[UIImageView alloc] initWithImage: super.image];	
-	self.imageView = imageView;
-	[self addSubview: self.imageView];
-	[imageView release];
+	self.imageView.image = theImage;
+	[self layoutSubviews];
 }
 
 - (void) setText: (NSString *) theText {
@@ -77,8 +82,12 @@
 	CGFloat indentWidth = ((self.indentationLevel + 1) * self.indentationWidth) + 10;
 	CGFloat verticalMidpoint = ceil(self.frame.size.height / 2);
 
-	CGRect imageViewFrame = CGRectMake(indentWidth, verticalMidpoint - (self.imageView.frame.size.height / 2), self.imageView.frame.size.width, self.imageView.frame.size.height);
-	self.imageView.frame = imageViewFrame;
+	CGRect imageViewFrame = CGRectZero;
+	
+	if (self.image) {
+		imageViewFrame = CGRectMake(indentWidth, verticalMidpoint - (self.image.size.height / 2), self.image.size.width, self.image.size.height);
+		self.imageView.frame = imageViewFrame;
+	}
 	
 	[self.textLabel sizeToFit];
 	CGRect textLabelFrame = CGRectMake(imageViewFrame.origin.x + imageViewFrame.size.width + 10, verticalMidpoint - (self.textLabel.frame.size.height / 2), self.textLabel.frame.size.width, self.textLabel.frame.size.height);
@@ -125,6 +134,5 @@
 	
     [super dealloc];
 }
-
 
 @end
