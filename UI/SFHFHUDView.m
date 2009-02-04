@@ -139,6 +139,8 @@ static UIFont *m_labelFont;
 }
 
 - (void) dealloc {
+	[m_activityIndicator release];
+	[m_statusLabel release];
 	[super dealloc];
 }
 
