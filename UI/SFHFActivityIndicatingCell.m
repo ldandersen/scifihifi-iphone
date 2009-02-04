@@ -144,7 +144,9 @@ static UIColor *m_normalTextColor;
 		self.activityIndicator.activityIndicatorViewStyle = UIActivityIndicatorViewStyleWhite;
 	}
 	else {
-		[self performSelector: @selector(deselect) withObject: nil afterDelay: 0.1];
+		if (self.selected) {
+			[self performSelector: @selector(deselect) withObject: nil afterDelay: 0.1];
+		}
 	}
 }
 
