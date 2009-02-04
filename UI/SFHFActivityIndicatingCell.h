@@ -34,6 +34,8 @@
 	UIImageView *m_imageView;
 	
 	BOOL m_isIndicatingActivity;
+	BOOL m_isTransitioning;
+	BOOL m_userInteractionWasEnabled;
 }
 
 @property (nonatomic, retain) UIActivityIndicatorView *activityIndicator;

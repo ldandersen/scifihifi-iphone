@@ -50,6 +50,7 @@ static UIColor *m_normalTextColor;
 		
 		UILabel *textLabel = [[UILabel alloc] initWithFrame: CGRectZero];
 		self.textLabel = textLabel;
+		self.textLabel.backgroundColor = [UIColor clearColor];
 		self.textLabel.font = [UIFont boldSystemFontOfSize: 17.0];
 		self.textLabel.lineBreakMode = UILineBreakModeTailTruncation;
 		[self addSubview: self.textLabel];
@@ -61,6 +62,7 @@ static UIColor *m_normalTextColor;
 		[imageView release];
 				
 		self.isIndicatingActivity = NO;
+		m_isTransitioning = NO;
 		
 		[self layoutSubviews];
 
@@ -76,7 +78,6 @@ static UIColor *m_normalTextColor;
 
 - (void) setText: (NSString *) theText {
 	super.text = theText;
-	
 	self.textLabel.text = theText;
 }
 
@@ -137,14 +138,44 @@ static UIColor *m_normalTextColor;
 }
 
 - (void) setSelected: (BOOL) selected animated: (BOOL) animated {
-	[super setSelected: selected animated:animated];
-	
 	if (selected) {
+		[super setSelected: selected animated:animated];
 		self.textLabel.textColor = m_selectedTextColor;
 	}
 	else {
-		self.textLabel.textColor = m_normalTextColor;
+		[self performSelector: @selector(deselect) withObject: nil afterDelay: 0.1];
 	}
+}
+
+- (void) deselect {
+	[super setSelected: NO animated: YES];
+	
+	CATransition *animation = [CATransition animation];
+	[animation setDelegate: self];
+	[animation setType: kCATransitionFade];
+	[animation setDuration: 0.1];
+	[animation setTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
+	[[self.textLabel layer] addAnimation: animation forKey: @"ActivityIndicatingCellFadeTransitionKey"];
+	
+	self.textLabel.textColor = m_normalTextColor;
+}
+
+- (void) animationDidStart: (CAAnimation *) animation {
+    m_isTransitioning = YES;    
+    m_userInteractionWasEnabled = self.userInteractionEnabled;
+    
+	if (m_userInteractionWasEnabled) {
+        self.userInteractionEnabled = NO;
+    }
+}
+
+
+- (void) animationDidStop: (CAAnimation *) animation finished: (BOOL) finished {
+	m_isTransitioning = NO;
+    
+    if (m_userInteractionWasEnabled) {
+        self.userInteractionEnabled = YES;
+    }
 }
 
 - (void)dealloc {
