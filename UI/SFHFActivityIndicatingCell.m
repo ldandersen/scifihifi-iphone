@@ -29,10 +29,18 @@
 
 @implementation SFHFActivityIndicatingCell
 
+static UIColor *m_selectedTextColor;
+static UIColor *m_normalTextColor;
+
 @synthesize activityIndicator = m_activityIndicator;
 @synthesize isIndicatingActivity = m_isIndicatingActivity;
 @synthesize textLabel = m_textLabel;
 @synthesize imageView = m_imageView;
+
++ (void) initialize {
+	m_selectedTextColor = [[UIColor whiteColor] retain];
+	m_normalTextColor = [[UIColor blackColor] retain];
+}
 
 - (id) initWithFrame: (CGRect) frame reuseIdentifier: (NSString *) reuseIdentifier {
     if (self = [super initWithFrame:frame reuseIdentifier:reuseIdentifier]) {
@@ -42,8 +50,8 @@
 		
 		UILabel *textLabel = [[UILabel alloc] initWithFrame: CGRectZero];
 		self.textLabel = textLabel;
-		self.textLabel.font = self.font;
-		self.textLabel.adjustsFontSizeToFitWidth = YES;
+		self.textLabel.font = [UIFont boldSystemFontOfSize: 17.0];
+		self.textLabel.lineBreakMode = UILineBreakModeTailTruncation;
 		[self addSubview: self.textLabel];
 		[textLabel release];
 
@@ -81,16 +89,17 @@
 - (void) layoutSubviews {
 	CGFloat indentWidth = ((self.indentationLevel + 1) * self.indentationWidth) + 10;
 	CGFloat verticalMidpoint = ceil(self.frame.size.height / 2);
-
+		
 	CGRect imageViewFrame = CGRectZero;
 	
 	if (self.image) {
-		imageViewFrame = CGRectMake(indentWidth, verticalMidpoint - (self.image.size.height / 2), self.image.size.width, self.image.size.height);
+		imageViewFrame = CGRectMake(indentWidth, verticalMidpoint - ceil(self.image.size.height / 2), self.image.size.width, self.image.size.height);
 		self.imageView.frame = imageViewFrame;
 	}
 	
 	[self.textLabel sizeToFit];
-	CGRect textLabelFrame = CGRectMake(imageViewFrame.origin.x + imageViewFrame.size.width + 10, verticalMidpoint - (self.textLabel.frame.size.height / 2), self.textLabel.frame.size.width, self.textLabel.frame.size.height);
+	CGFloat originPoint = imageViewFrame.origin.x + imageViewFrame.size.width + 10;
+	CGRect textLabelFrame = CGRectMake(originPoint, ceil(verticalMidpoint - (self.textLabel.frame.size.height / 2)) - 1, self.frame.size.width - originPoint - 20, self.textLabel.frame.size.height);
 	self.textLabel.frame = textLabelFrame;
 	
 	if (self.isIndicatingActivity) {
@@ -125,6 +134,17 @@
 	[self addSubview: self.imageView];
 	[self.activityIndicator removeFromSuperview];
 	[self.activityIndicator stopAnimating];
+}
+
+- (void) setSelected: (BOOL) selected animated: (BOOL) animated {
+	[super setSelected: selected animated:animated];
+	
+	if (selected) {
+		self.textLabel.textColor = m_selectedTextColor;
+	}
+	else {
+		self.textLabel.textColor = m_normalTextColor;
+	}
 }
 
 - (void)dealloc {
