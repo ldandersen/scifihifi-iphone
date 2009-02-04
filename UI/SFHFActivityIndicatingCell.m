@@ -141,6 +141,7 @@ static UIColor *m_normalTextColor;
 	if (selected) {
 		[super setSelected: selected animated:animated];
 		self.textLabel.textColor = m_selectedTextColor;
+		self.activityIndicator.activityIndicatorViewStyle = UIActivityIndicatorViewStyleWhite;
 	}
 	else {
 		[self performSelector: @selector(deselect) withObject: nil afterDelay: 0.1];
@@ -158,6 +159,7 @@ static UIColor *m_normalTextColor;
 	[[self.textLabel layer] addAnimation: animation forKey: @"ActivityIndicatingCellFadeTransitionKey"];
 	
 	self.textLabel.textColor = m_normalTextColor;
+	self.activityIndicator.activityIndicatorViewStyle = UIActivityIndicatorViewStyleGray;
 }
 
 - (void) animationDidStart: (CAAnimation *) animation {
