@@ -38,7 +38,7 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 @end
 #endif
 
-implementation SFHFKeychainUtils
+@implementation SFHFKeychainUtils
 	
 #if TARGET_IPHONE_SIMULATOR
 
@@ -183,7 +183,6 @@ implementation SFHFKeychainUtils
 													 &item);
 	
 	if (status != noErr) {
-		
 		if (status != errSecItemNotFound) {
 			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
 		}
@@ -203,35 +202,74 @@ implementation SFHFKeychainUtils
 	}
 	
 	*error = nil;
+		
+	// Set up a query dictionary with the base query attributes: item type (generic), username, and service
 	
-	NSDictionary *result;
+	NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, kSecAttrAccount, kSecAttrService, nil] autorelease];
+	NSArray *objects = [[[NSArray alloc] initWithObjects: (NSString *) kSecClassGenericPassword, username, serviceName, nil] autorelease];
 	
-	NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, kSecAttrAccount, kSecAttrService, kSecReturnAttributes, nil] autorelease];
-	NSArray *objects = [[[NSArray alloc] initWithObjects: (NSString *) kSecClassGenericPassword, username, serviceName, kCFBooleanTrue, nil] autorelease];
+	NSMutableDictionary *query = [[[NSMutableDictionary alloc] initWithObjects: objects forKeys: keys] autorelease];
 	
-	NSDictionary *query = [[[NSDictionary alloc] initWithObjects: objects forKeys: keys] autorelease];
+	// First do a query for attributes, in case we already have a Keychain item with no password data set.
+	// One likely way such an incorrect item could have come about is due to the previous (incorrect)
+	// version of this code (which set the password as a generic attribute instead of password data).
 	
-	OSStatus status = SecItemCopyMatching((CFDictionaryRef) query, (CFTypeRef *) &result);
+	NSDictionary *attributeResult = NULL;
+	NSMutableDictionary *attributeQuery = [query mutableCopy];
+	[attributeQuery setObject: (id) kCFBooleanTrue forKey:(id) kSecReturnAttributes];
+	OSStatus status = SecItemCopyMatching((CFDictionaryRef) attributeQuery, (CFTypeRef *) &attributeResult);
+	
+	[attributeResult release];
+	[attributeQuery release];
 	
 	if (status != noErr) {
+		// No existing item found--simply return nil for the password
 		if (status != errSecItemNotFound) {
+			//Only return an error if a real exception happened--not simply for "not found."
+			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
+		}
+		
+		return nil;
+	}
+	
+	// We have an existing item, now query for the password data associated with it.
+	
+	NSData *resultData = nil;
+	NSMutableDictionary *passwordQuery = [query mutableCopy];
+	[passwordQuery setObject: (id) kCFBooleanTrue forKey: (id) kSecReturnData];
+
+	status = SecItemCopyMatching((CFDictionaryRef) passwordQuery, (CFTypeRef *) &resultData);
+	
+	[resultData autorelease];
+	[passwordQuery release];
+	
+	if (status != noErr) {
+		if (status == errSecItemNotFound) {
+			// We found attributes for the item previously, but no password now, so return a special error.
+			// Users of this API will probably want to detect this error and prompt the user to
+			// re-enter their credentials.  When you attempt to store the re-entered credentials
+			// using storeUsername:andPassword:forServiceName:updateExisting:error
+			// the old, incorrect entry will be deleted and a new one with a properly encrypted
+			// password will be added.
+			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -1999 userInfo: nil];			
+		}
+		else {
+			// Something else went wrong. Simply return the normal Keychain API error code.
 			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
 		}
 		
 		return nil;
 	}
 
-	[result autorelease];
-
 	NSString *password = nil;	
-	NSData *passwordData = [result objectForKey: (id) kSecValueData];
 		
-	if (passwordData) {
-		[[NSString alloc] initWithData: passwordData encoding: NSUTF8StringEncoding];
+	if (resultData) {
+		password = [[NSString alloc] initWithData: resultData encoding: NSUTF8StringEncoding];
 	}
 	else {
-		// There is an existing item, but it doesn't have a password properly stored (possible a result of the old version of this code).
-		// Might want to delete the existing item if you get this error.
+		// There is an existing item, but we weren't able to get password data for it for some reason,
+		// Possibly as a result of an item being incorrectly entered by the previous code.
+		// Set the -1999 error so the code above us can prompt the user again.
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -1999 userInfo: nil];		
 	}
 			
@@ -244,11 +282,13 @@ implementation SFHFKeychainUtils
 		return;
 	}
 	
+	// See if we already have a password entered for these credentials.
+	
 	NSString *existingPassword = [SFHFKeychainUtils getPasswordForUsername: username andServiceName: serviceName error: error];
 
-	if ([*error code] == -1999 && updateExisting) {
+	if ([*error code] == -1999) {
 		// There is an existing entry without a password properly stored (possibly as a result of the previous incorrect version of this code.
-		// Delete the existing item before moving on if we have permission to update the existing entry.
+		// Delete the existing item before moving on entering a correct one.
 
 		*error = nil;
 		
@@ -267,7 +307,12 @@ implementation SFHFKeychainUtils
 	OSStatus status = noErr;
 		
 	if (existingPassword) {
+		// We have an existing, properly entered item with a password.
+		// Update the existing item.
+		
 		if ((existingPassword != password) && updateExisting) {
+			//Only update if we're allowed to update existing.  If not, simply do nothing.
+			
 			NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, 
 							  kSecAttrService, 
 							  kSecAttrLabel, 
@@ -286,6 +331,9 @@ implementation SFHFKeychainUtils
 		}
 	}
 	else {
+		// No existing entry (or an existing, improperly entered, and therefore now
+		// deleted, entry).  Create a new entry.
+		
 		NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, 
 						  kSecAttrService, 
 						  kSecAttrLabel, 
@@ -306,6 +354,7 @@ implementation SFHFKeychainUtils
 	}
 	
 	if (status != noErr) {
+		// Something went wrong with adding the new item. Return the Keychain error code.
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
 	}
 }
