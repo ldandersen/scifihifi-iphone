@@ -39,7 +39,7 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 #endif
 
 @implementation SFHFKeychainUtils
-	
+
 #if __IPHONE_OS_VERSION_MIN_REQUIRED < 30000 && TARGET_IPHONE_SIMULATOR
 
 + (NSString *) getPasswordForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error {
@@ -55,26 +55,26 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	}
 	
 	// from Advanced Mac OS X Programming, ch. 16
-    UInt32 length;
-    char *password;
-    SecKeychainAttribute attributes[8];
-    SecKeychainAttributeList list;
+  UInt32 length;
+  char *password;
+  SecKeychainAttribute attributes[8];
+  SecKeychainAttributeList list;
 	
-    attributes[0].tag = kSecAccountItemAttr;
-    attributes[1].tag = kSecDescriptionItemAttr;
-    attributes[2].tag = kSecLabelItemAttr;
-    attributes[3].tag = kSecModDateItemAttr;
-    
-    list.count = 4;
-    list.attr = attributes;
-    
-    OSStatus status = SecKeychainItemCopyContent(item, NULL, &list, &length, (void **)&password);
+  attributes[0].tag = kSecAccountItemAttr;
+  attributes[1].tag = kSecDescriptionItemAttr;
+  attributes[2].tag = kSecLabelItemAttr;
+  attributes[3].tag = kSecModDateItemAttr;
+  
+  list.count = 4;
+  list.attr = attributes;
+  
+  OSStatus status = SecKeychainItemCopyContent(item, NULL, &list, &length, (void **)&password);
 	
 	if (status != noErr) {
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
 		return nil;
-    }
-
+  }
+  
 	NSString *passwordString = nil;
 	
 	if (password != NULL) {
@@ -90,10 +90,10 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	}
 	
 	SecKeychainItemFreeContent(&list, password);
-    
-    CFRelease(item);
-    
-    return passwordString;
+  
+  CFRelease(item);
+  
+  return passwordString;
 }
 
 + (void) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error {	
@@ -114,21 +114,21 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	
 	if (item) {
 		status = SecKeychainItemModifyAttributesAndData(item,
-														NULL,
-														strlen([password UTF8String]),
-														[password UTF8String]);
+                                                    NULL,
+                                                    strlen([password UTF8String]),
+                                                    [password UTF8String]);
 		
 		CFRelease(item);
 	}
 	else {
 		status = SecKeychainAddGenericPassword(NULL,                                     
-											   strlen([serviceName UTF8String]), 
-											   [serviceName UTF8String],
-											   strlen([username UTF8String]),                        
-											   [username UTF8String],
-											   strlen([password UTF8String]),
-											   [password UTF8String],
-											   NULL);
+                                           strlen([serviceName UTF8String]), 
+                                           [serviceName UTF8String],
+                                           strlen([username UTF8String]),                        
+                                           [username UTF8String],
+                                           strlen([password UTF8String]),
+                                           [password UTF8String],
+                                           NULL);
 	}
 	
 	if (status != noErr) {
@@ -170,17 +170,17 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	}
 	
 	*error = nil;
-		
+  
 	SecKeychainItemRef item;
 	
 	OSStatus status = SecKeychainFindGenericPassword(NULL,
-													 strlen([serviceName UTF8String]),
-													 [serviceName UTF8String],
-													 strlen([username UTF8String]),
-													 [username UTF8String],
-													 NULL,
-													 NULL,
-													 &item);
+                                                   strlen([serviceName UTF8String]),
+                                                   [serviceName UTF8String],
+                                                   strlen([username UTF8String]),
+                                                   [username UTF8String],
+                                                   NULL,
+                                                   NULL,
+                                                   &item);
 	
 	if (status != noErr) {
 		if (status != errSecItemNotFound) {
@@ -197,12 +197,16 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 
 + (NSString *) getPasswordForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error {
 	if (!username || !serviceName) {
-		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
+		if (error != nil) {
+			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
+		}
 		return nil;
 	}
 	
-	*error = nil;
-		
+	if (error != nil) {
+		*error = nil;
+	}
+  
 	// Set up a query dictionary with the base query attributes: item type (generic), username, and service
 	
 	NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, kSecAttrAccount, kSecAttrService, nil] autorelease];
@@ -224,7 +228,7 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	
 	if (status != noErr) {
 		// No existing item found--simply return nil for the password
-		if (status != errSecItemNotFound) {
+		if (error != nil && status != errSecItemNotFound) {
 			//Only return an error if a real exception happened--not simply for "not found."
 			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
 		}
@@ -237,7 +241,7 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	NSData *resultData = nil;
 	NSMutableDictionary *passwordQuery = [query mutableCopy];
 	[passwordQuery setObject: (id) kCFBooleanTrue forKey: (id) kSecReturnData];
-
+  
 	status = SecItemCopyMatching((CFDictionaryRef) passwordQuery, (CFTypeRef *) &resultData);
 	
 	[resultData autorelease];
@@ -251,18 +255,22 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 			// using storeUsername:andPassword:forServiceName:updateExisting:error
 			// the old, incorrect entry will be deleted and a new one with a properly encrypted
 			// password will be added.
-			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -1999 userInfo: nil];			
+			if (error != nil) {
+				*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -1999 userInfo: nil];
+			}
 		}
 		else {
 			// Something else went wrong. Simply return the normal Keychain API error code.
-			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
+			if (error != nil) {
+				*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
+			}
 		}
 		
 		return nil;
 	}
-
+  
 	NSString *password = nil;	
-		
+  
 	if (resultData) {
 		password = [[NSString alloc] initWithData: resultData encoding: NSUTF8StringEncoding];
 	}
@@ -270,103 +278,140 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 		// There is an existing item, but we weren't able to get password data for it for some reason,
 		// Possibly as a result of an item being incorrectly entered by the previous code.
 		// Set the -1999 error so the code above us can prompt the user again.
-		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -1999 userInfo: nil];		
+		if (error != nil) {
+			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -1999 userInfo: nil];
+		}
 	}
-			
+  
 	return [password autorelease];
 }
 
-+ (void) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error {		
-	if (!username || !password || !serviceName) {
-		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
-		return;
++ (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error 
+{		
+	if (!username || !password || !serviceName) 
+  {
+		if (error != nil) 
+    {
+			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
+		}
+		return NO;
 	}
 	
 	// See if we already have a password entered for these credentials.
-	
-	NSString *existingPassword = [SFHFKeychainUtils getPasswordForUsername: username andServiceName: serviceName error: error];
-
-	if ([*error code] == -1999) {
+	NSError *getError = nil;
+	NSString *existingPassword = [SFHFKeychainUtils getPasswordForUsername: username andServiceName: serviceName error:&getError];
+  
+	if ([getError code] == -1999) 
+  {
 		// There is an existing entry without a password properly stored (possibly as a result of the previous incorrect version of this code.
 		// Delete the existing item before moving on entering a correct one.
-
-		*error = nil;
+    
+		getError = nil;
 		
-		[self deleteItemForUsername: username andServiceName: serviceName error: error];
-	
-		if ([*error code] != noErr) {
-			return;
+		[self deleteItemForUsername: username andServiceName: serviceName error: &getError];
+    
+		if ([getError code] != noErr) 
+    {
+			if (error != nil) 
+      {
+				*error = getError;
+			}
+			return NO;
 		}
 	}
-	else if ([*error code] != noErr) {
-		return;
+	else if ([getError code] != noErr) 
+  {
+		if (error != nil) 
+    {
+			*error = getError;
+		}
+		return NO;
 	}
 	
-	*error = nil;
+	if (error != nil) 
+  {
+		*error = nil;
+	}
 	
 	OSStatus status = noErr;
-		
-	if (existingPassword) {
+  
+	if (existingPassword) 
+  {
 		// We have an existing, properly entered item with a password.
 		// Update the existing item.
 		
-		if (![existingPassword isEqualToString:password] && updateExisting) {
+		if (![existingPassword isEqualToString:password] && updateExisting) 
+    {
 			//Only update if we're allowed to update existing.  If not, simply do nothing.
 			
 			NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, 
-							  kSecAttrService, 
-							  kSecAttrLabel, 
-							  kSecAttrAccount, 
-							  nil] autorelease];
+                        kSecAttrService, 
+                        kSecAttrLabel, 
+                        kSecAttrAccount, 
+                        nil] autorelease];
 			
 			NSArray *objects = [[[NSArray alloc] initWithObjects: (NSString *) kSecClassGenericPassword, 
-								 serviceName,
-								 serviceName,
-								 username,
-								 nil] autorelease];
+                           serviceName,
+                           serviceName,
+                           username,
+                           nil] autorelease];
 			
 			NSDictionary *query = [[[NSDictionary alloc] initWithObjects: objects forKeys: keys] autorelease];			
 			
 			status = SecItemUpdate((CFDictionaryRef) query, (CFDictionaryRef) [NSDictionary dictionaryWithObject: [password dataUsingEncoding: NSUTF8StringEncoding] forKey: (NSString *) kSecValueData]);
 		}
 	}
-	else {
+	else 
+  {
 		// No existing entry (or an existing, improperly entered, and therefore now
 		// deleted, entry).  Create a new entry.
 		
 		NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, 
-						  kSecAttrService, 
-						  kSecAttrLabel, 
-						  kSecAttrAccount, 
-						  kSecValueData, 
-						  nil] autorelease];
+                      kSecAttrService, 
+                      kSecAttrLabel, 
+                      kSecAttrAccount, 
+                      kSecValueData, 
+                      nil] autorelease];
 		
 		NSArray *objects = [[[NSArray alloc] initWithObjects: (NSString *) kSecClassGenericPassword, 
-							 serviceName,
-							 serviceName,
-							 username,
-							 [password dataUsingEncoding: NSUTF8StringEncoding],
-							 nil] autorelease];
+                         serviceName,
+                         serviceName,
+                         username,
+                         [password dataUsingEncoding: NSUTF8StringEncoding],
+                         nil] autorelease];
 		
 		NSDictionary *query = [[[NSDictionary alloc] initWithObjects: objects forKeys: keys] autorelease];			
-
+    
 		status = SecItemAdd((CFDictionaryRef) query, NULL);
 	}
 	
-	if (status != noErr) {
+	if (error != nil && status != noErr) 
+  {
 		// Something went wrong with adding the new item. Return the Keychain error code.
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];
+    
+    return NO;
 	}
+  
+  return YES;
 }
 
-+ (void) deleteItemForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error {
-	if (!username || !serviceName) {
-		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
-		return;
++ (BOOL) deleteItemForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error 
+{
+	if (!username || !serviceName) 
+  {
+		if (error != nil) 
+    {
+			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
+		}
+		return NO;
 	}
 	
-	*error = nil;
-		
+	if (error != nil) 
+  {
+		*error = nil;
+	}
+  
 	NSArray *keys = [[[NSArray alloc] initWithObjects: (NSString *) kSecClass, kSecAttrAccount, kSecAttrService, kSecReturnAttributes, nil] autorelease];
 	NSArray *objects = [[[NSArray alloc] initWithObjects: (NSString *) kSecClassGenericPassword, username, serviceName, kCFBooleanTrue, nil] autorelease];
 	
@@ -374,9 +419,14 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	
 	OSStatus status = SecItemDelete((CFDictionaryRef) query);
 	
-	if (status != noErr) {
+	if (error != nil && status != noErr) 
+  {
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: status userInfo: nil];		
+    
+    return NO;
 	}
+  
+  return YES;
 }
 
 #endif
