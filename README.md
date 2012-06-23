@@ -1,0 +1,1 @@
+Everything here should be considered deprecated. Check out [STUtils](http://github.com/ldandersen/STUtils) instead.
