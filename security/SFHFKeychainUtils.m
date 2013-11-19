@@ -308,6 +308,21 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
         forServiceName: (NSString *) serviceName
         updateExisting: (BOOL) updateExisting
                  error: (NSError **) error
+{
+    return [self storeUsername:username
+                   andPassword:password
+                forServiceName:serviceName
+                updateExisting:updateExisting
+                 accessibility:nil
+                         error:error];
+}
+
++ (BOOL) storeUsername: (NSString *) username
+           andPassword: (NSString *) password
+        forServiceName: (NSString *) serviceName
+        updateExisting: (BOOL) updateExisting
+         accessibility: (CFTypeRef) accessibility // restrict accessiblitiy - see kSecAttrAccessible
+                 error: (NSError **) error
 {		
 	if (!username || !password || !serviceName) 
   {
@@ -376,6 +391,12 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
                            serviceName,
                            username,
                            nil] autorelease];
+        
+            if (accessibility != nil)
+            {
+                keys = [keys arrayByAddingObject:kSecAttrAccessible];
+                objects = [objects arrayByAddingObject:accessibility];
+            }
 			
 			NSDictionary *query = [[[NSDictionary alloc] initWithObjects: objects forKeys: keys] autorelease];			
 			
