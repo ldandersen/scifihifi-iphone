@@ -337,7 +337,7 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	NSError *getError = nil;
 	NSString *existingPassword = [SFHFKeychainUtils getPasswordForUsername: username andServiceName: serviceName error:&getError];
   
-	if ([getError code] == -1999) 
+	if ([getError code] == -1999 || (existingPassword && [existingPassword length] == 0))
   {
 		// There is an existing entry without a password properly stored (possibly as a result of the previous incorrect version of this code.
 		// Delete the existing item before moving on entering a correct one.
@@ -345,6 +345,8 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 		getError = nil;
 		
 		[self deleteItemForUsername: username andServiceName: serviceName error: &getError];
+      
+        existingPassword = nil;
     
 		if ([getError code] != noErr) 
     {
