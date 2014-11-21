@@ -8,6 +8,7 @@ Pod::Spec.new do |s|
   s.source   = { :git => 'https://github.com/ldandersen/scifihifi-iphone.git', :tag => '0.0.2' }
   s.source_files = 'security'
   s.framework = 'Security'
+  s.requires_arc = false
 
   s.license  = {:type => 'MIT', :text => <<-TXT
                   Created by Buzz Andersen on 10/20/08.
