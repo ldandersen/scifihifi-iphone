@@ -42,7 +42,10 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 
 #if __IPHONE_OS_VERSION_MIN_REQUIRED < 30000 && TARGET_IPHONE_SIMULATOR
 
-+ (NSString *) getPasswordForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error {
++ (NSString *) getPasswordForUsername: (NSString *) username
+                       andServiceName: (NSString *) serviceName
+                                error: (NSError **) error
+{
 	if (!username || !serviceName) {
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
 		return nil;
@@ -96,7 +99,12 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
   return passwordString;
 }
 
-+ (void) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error {	
++ (void) storeUsername: (NSString *) username
+           andPassword: (NSString *) password
+        forServiceName: (NSString *) serviceName
+        updateExisting: (BOOL) updateExisting
+                 error: (NSError **) error
+{
 	if (!username || !password || !serviceName) {
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
 		return;
@@ -136,7 +144,10 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	}
 }
 
-+ (void) deleteItemForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error {
++ (void) deleteItemForUsername: (NSString *) username
+                andServiceName: (NSString *) serviceName
+                         error: (NSError **) error
+{
 	if (!username || !serviceName) {
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: 2000 userInfo: nil];
 		return;
@@ -163,7 +174,10 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	}
 }
 
-+ (SecKeychainItemRef) getKeychainItemReferenceForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error {
++ (SecKeychainItemRef) getKeychainItemReferenceForUsername: (NSString *) username
+                                            andServiceName: (NSString *) serviceName
+                                                     error: (NSError **) error
+{
 	if (!username || !serviceName) {
 		*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
 		return nil;
@@ -195,7 +209,10 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 
 #else
 
-+ (NSString *) getPasswordForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error {
++ (NSString *) getPasswordForUsername: (NSString *) username
+                       andServiceName: (NSString *) serviceName
+                                error: (NSError **) error
+{
 	if (!username || !serviceName) {
 		if (error != nil) {
 			*error = [NSError errorWithDomain: SFHFKeychainUtilsErrorDomain code: -2000 userInfo: nil];
@@ -286,7 +303,26 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	return [password autorelease];
 }
 
-+ (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error 
++ (BOOL) storeUsername: (NSString *) username
+           andPassword: (NSString *) password
+        forServiceName: (NSString *) serviceName
+        updateExisting: (BOOL) updateExisting
+                 error: (NSError **) error
+{
+    return [self storeUsername:username
+                   andPassword:password
+                forServiceName:serviceName
+                updateExisting:updateExisting
+                 accessibility:nil
+                         error:error];
+}
+
++ (BOOL) storeUsername: (NSString *) username
+           andPassword: (NSString *) password
+        forServiceName: (NSString *) serviceName
+        updateExisting: (BOOL) updateExisting
+         accessibility: (CFTypeRef) accessibility // restrict accessiblitiy - see kSecAttrAccessible
+                 error: (NSError **) error
 {		
 	if (!username || !password || !serviceName) 
   {
@@ -301,7 +337,7 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 	NSError *getError = nil;
 	NSString *existingPassword = [SFHFKeychainUtils getPasswordForUsername: username andServiceName: serviceName error:&getError];
   
-	if ([getError code] == -1999) 
+	if ([getError code] == -1999 || (existingPassword && [existingPassword length] == 0))
   {
 		// There is an existing entry without a password properly stored (possibly as a result of the previous incorrect version of this code.
 		// Delete the existing item before moving on entering a correct one.
@@ -309,6 +345,8 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
 		getError = nil;
 		
 		[self deleteItemForUsername: username andServiceName: serviceName error: &getError];
+      
+        existingPassword = nil;
     
 		if ([getError code] != noErr) 
     {
@@ -355,6 +393,12 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
                            serviceName,
                            username,
                            nil] autorelease];
+        
+            if (accessibility != nil)
+            {
+                keys = [keys arrayByAddingObject:kSecAttrAccessible];
+                objects = [objects arrayByAddingObject:accessibility];
+            }
 			
 			NSDictionary *query = [[[NSDictionary alloc] initWithObjects: objects forKeys: keys] autorelease];			
 			
@@ -398,7 +442,9 @@ static NSString *SFHFKeychainUtilsErrorDomain = @"SFHFKeychainUtilsErrorDomain";
   return YES;
 }
 
-+ (BOOL) deleteItemForUsername: (NSString *) username andServiceName: (NSString *) serviceName error: (NSError **) error 
++ (BOOL) deleteItemForUsername: (NSString *) username
+                andServiceName: (NSString *) serviceName
+                         error: (NSError **) error
 {
 	if (!username || !serviceName) 
   {
